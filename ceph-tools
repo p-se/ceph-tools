@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+command="$1"
+
+if [[ "$1" == "cmake" ]]
+then
+    ./do_cmake.sh \
+        -DENABLE_GIT_VERSION=OFF \
+        -DWITH_TESTS=ON \
+        -DWITH_CCACHE=ON \
+        -DWITH_RADOSGW_AMQP_ENDPOINT=NO \
+        -DWITH_PYTHON3=ON \
+        -DWITH_PYTHON2=OFF \
+        -DMGR_PYTHON_VERSION=3 \
+        -DDASHBOARD_FRONTEND_LANGS=ALL \
+        -DWITH_RADOSGW_KAFKA_ENDPOINT=OFF \
+        -DWITH_MGR_DASHBOARD_FRONTEND=ON
+fi
