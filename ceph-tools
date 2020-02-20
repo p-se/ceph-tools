@@ -1,26 +1,85 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 
-cmake() {
-    ./do_cmake.sh \
-        -DENABLE_GIT_VERSION=OFF \
-        -DWITH_TESTS=ON \
-        -DWITH_CCACHE=ON \
-        -DWITH_RADOSGW_AMQP_ENDPOINT=NO \
-        -DWITH_PYTHON3=ON \
-        -DWITH_PYTHON2=OFF \
-        -DMGR_PYTHON_VERSION=3 \
-        -DDASHBOARD_FRONTEND_LANGS=ALL \
-        -DWITH_RADOSGW_KAFKA_ENDPOINT=OFF \
-        -DWITH_MGR_DASHBOARD_FRONTEND=ON
-}
+"""ceph-tools
 
-command="$1"
+Usage:
+    ceph-tools (cmake|clean-cmake|clean-systemd)
+    ceph-tools -h|--help
+"""
 
-if [[ "$command" == "cmake" ]]
-then
-    cmake
-elif [[ "$command" == "clean-cmake" ]]
-then
-    rm -rf build/
-    cmake
-fi
+from pystemd.systemd1 import Manager
+from shutil import rmtree
+from subprocess import check_output, CalledProcessError
+from typing import Union, List
+from docopt import docopt
+import os
+
+
+def run(cmd: Union[List[str], str]) -> (str, int):
+    assert type(cmd) in (list, str) and cmd
+    if type(cmd) == str:
+        cmd = cmd.split(' ')
+
+    try:
+        print(' '.join(cmd))
+        o = check_output(cmd)
+        return o, 0
+    except CalledProcessError as e:
+        return e.output, e.returncode
+
+
+def remove_systemd_ceph_services(keyword='ceph'):
+    manager = Manager()
+    manager.load()
+
+    # fetch services
+    unit_files = [
+        (name.decode('utf-8'), status.decode('utf-8'))
+        for name, status in manager.Manager.ListUnitFiles()
+        if keyword in str(name)
+    ]
+
+    for path, status in unit_files:
+        name = os.path.split(path)[-1]
+
+        # stop
+        print(run('sudo systemctl stop %s' % name))
+
+        # disable
+        print(run('sudo systemctl disable %s' % name))
+
+        # remove
+        print(run(['sudo', 'rm', path, '-rf']))
+
+        # reload
+        print(run('sudo systemctl daemon-reload'))
+
+        # remove failed
+        print(run('sudo systemctl reset-failed'))
+
+
+def cmake():
+    print(run('''
+        ./do_cmake.sh
+            -denable_git_version=off
+            -dwith_tests=on
+            -dwith_ccache=on
+            -dwith_radosgw_amqp_endpoint=no
+            -dwith_python3=on
+            -dwith_python2=off
+            -dmgr_python_version=3
+            -ddashboard_frontend_langs=all
+            -dwith_radosgw_kafka_endpoint=off
+            -dwith_mgr_dashboard_frontend=on
+    '''))
+
+
+if __name__ == '__main__':
+    args = docopt(__doc__, version='Ceph Tools 0.1')
+    if args['clean-systemd']:
+        remove_systemd_ceph_services()
+    elif args['cmake']:
+        cmake()
+    elif args['clean-cmake']:
+        rmtree('./build')
+        cmake()
