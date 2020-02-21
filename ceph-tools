@@ -23,9 +23,15 @@ def run(cmd: Union[List[str], str]) -> (str, int):
     try:
         print(' '.join(cmd))
         o = check_output(cmd)
-        return o, 0
+        return o.decode('utf-8'), 0
     except CalledProcessError as e:
         return e.output, e.returncode
+
+
+def print_run(cmd: Union[List[str], str]) -> None:
+    out, _ = run(cmd)
+    if out:
+        print(out)
 
 
 def remove_systemd_ceph_services(keyword='ceph'):
@@ -43,23 +49,23 @@ def remove_systemd_ceph_services(keyword='ceph'):
         name = os.path.split(path)[-1]
 
         # stop
-        print(run('sudo systemctl stop %s' % name))
+        print_run('sudo systemctl stop %s' % name)
 
         # disable
-        print(run('sudo systemctl disable %s' % name))
+        print_run('sudo systemctl disable %s' % name)
 
         # remove
-        print(run(['sudo', 'rm', path, '-rf']))
+        print_run(['sudo', 'rm', path, '-rf'])
 
         # reload
-        print(run('sudo systemctl daemon-reload'))
+        print_run('sudo systemctl daemon-reload')
 
         # remove failed
-        print(run('sudo systemctl reset-failed'))
+        print_run('sudo systemctl reset-failed')
 
 
 def cmake():
-    print(run('''
+    print_run('''
         ./do_cmake.sh
             -denable_git_version=off
             -dwith_tests=on
@@ -71,7 +77,7 @@ def cmake():
             -ddashboard_frontend_langs=all
             -dwith_radosgw_kafka_endpoint=off
             -dwith_mgr_dashboard_frontend=on
-    '''))
+    ''')
 
 
 if __name__ == '__main__':
