@@ -35,6 +35,9 @@ def print_run(cmd: Union[List[str], str]) -> None:
 
 
 def remove_systemd_ceph_services(keyword='ceph'):
+    """
+    Removes systemd services left and created by cephadm.
+    """
     manager = Manager()
     manager.load()
 
@@ -67,6 +70,9 @@ def remove_systemd_ceph_services(keyword='ceph'):
 
 
 def cmake():
+    """
+    Runs cmake with will required parameters known to work for the Dashboard.
+    """
     print_run('''
         ./do_cmake.sh
             -denable_git_version=off
