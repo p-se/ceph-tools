@@ -63,6 +63,8 @@ def remove_systemd_ceph_services(keyword='ceph'):
         # remove failed
         print_run('sudo systemctl reset-failed')
 
+    print_run('sudo rm -rf /var/lib/ceph')
+
 
 def cmake():
     print_run('''
