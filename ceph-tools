@@ -9,6 +9,7 @@ Usage:
 
 import os
 import sys
+import glob
 from pystemd.systemd1 import Manager
 from shutil import rmtree
 from subprocess import check_output, CalledProcessError
@@ -16,23 +17,38 @@ from typing import Union, List, NoReturn
 from docopt import docopt
 
 
-def run(cmd: Union[List[str], str]) -> (str, int):
+def verbose(fn):
+    def _wrapper(*args, **kwargs):
+        print('{fnname} {args} {kwargs}'.format(
+            fnname=fn.__name__,
+            args=str(args),
+            kwargs=str(kwargs)
+        ))
+        return fn(*args, **kwargs)
+    return _wrapper
+
+
+rmtree = verbose(rmtree)
+remove = verbose(os.remove)
+
+
+@verbose
+def run(cmd: Union[List[str], str], shell=False):
     assert type(cmd) in (list, str) and cmd
     if type(cmd) == str:
         cmd = cmd.split(' ')
 
     try:
-        print(' '.join(cmd))
-        o = check_output(cmd)
-        return o.decode('utf-8'), 0
+        o = check_output(cmd, shell=shell)
+        output = o.decode('utf-8')
+        code = 0
     except CalledProcessError as e:
-        return e.output, e.returncode
+        output = e.output
+        code = e.returncode
 
+    if output:
+        print(os.linesep.join(o.replace(r'^', '\t') for o in output.split(os.linesep)))
 
-def print_run(cmd: Union[List[str], str]) -> None:
-    out, code = run(cmd)
-    if out:
-        print(out)
     if code > 0:
         sys.exit(code)
 
@@ -58,32 +74,41 @@ def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
         name = os.path.split(path)[-1]
 
         if str(name).endswith('@.service'):
-            print_run(['sudo', 'rm', path, '-rf'])
+            remove(path)
             continue
 
         # stop
-        print_run('sudo systemctl stop %s' % name)
+        run('systemctl stop %s' % name)
 
         # disable
-        print_run('sudo systemctl disable %s' % name)
+        run('systemctl disable %s' % name)
 
         # remove
-        print_run(['sudo', 'rm', path, '-rf'])
+        remove(path)
+
+    files = glob.glob('/etc/systemd/system/ceph-*')
+    for f in files:
+        if os.path.isdir(f):
+            rmtree(f)
+        else:
+            remove(f)
 
     # reload
-    print_run('sudo systemctl daemon-reload')
+    run('sudo systemctl daemon-reload')
 
     # remove failed
-    print_run('sudo systemctl reset-failed')
+    run('sudo systemctl reset-failed')
 
-    print_run('sudo rm -rf /var/lib/ceph')
+    data_dir = '/var/lib/ceph'
+    if os.access(data_dir, os.W_OK):
+        rmtree(data_dir)
 
 
 def cmake():
     """
     Runs cmake with will required parameters known to work for the Dashboard.
     """
-    print_run('''
+    run('''
         ./do_cmake.sh
             -denable_git_version=off
             -dwith_tests=on
