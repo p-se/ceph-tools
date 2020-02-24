@@ -7,12 +7,13 @@ Usage:
     ceph-tools -h|--help
 """
 
+import os
+import sys
 from pystemd.systemd1 import Manager
 from shutil import rmtree
 from subprocess import check_output, CalledProcessError
-from typing import Union, List
+from typing import Union, List, NoReturn
 from docopt import docopt
-import os
 
 
 def run(cmd: Union[List[str], str]) -> (str, int):
@@ -29,12 +30,14 @@ def run(cmd: Union[List[str], str]) -> (str, int):
 
 
 def print_run(cmd: Union[List[str], str]) -> None:
-    out, _ = run(cmd)
+    out, code = run(cmd)
     if out:
         print(out)
+    if code > 0:
+        sys.exit(code)
 
 
-def remove_systemd_ceph_services(keyword='ceph'):
+def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
     """
     Removes systemd services left and created by cephadm.
     """
@@ -43,13 +46,20 @@ def remove_systemd_ceph_services(keyword='ceph'):
 
     # fetch services
     unit_files = [
-        (name.decode('utf-8'), status.decode('utf-8'))
+        (str(name.decode('utf-8')), str(status.decode('utf-8')))
         for name, status in manager.Manager.ListUnitFiles()
         if keyword in str(name)
     ]
 
+    if len(unit_files) == 0:
+        return
+
     for path, status in unit_files:
         name = os.path.split(path)[-1]
+
+        if str(name).endswith('@.service'):
+            print_run(['sudo', 'rm', path, '-rf'])
+            continue
 
         # stop
         print_run('sudo systemctl stop %s' % name)
@@ -60,11 +70,11 @@ def remove_systemd_ceph_services(keyword='ceph'):
         # remove
         print_run(['sudo', 'rm', path, '-rf'])
 
-        # reload
-        print_run('sudo systemctl daemon-reload')
+    # reload
+    print_run('sudo systemctl daemon-reload')
 
-        # remove failed
-        print_run('sudo systemctl reset-failed')
+    # remove failed
+    print_run('sudo systemctl reset-failed')
 
     print_run('sudo rm -rf /var/lib/ceph')
 
