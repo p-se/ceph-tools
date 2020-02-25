@@ -25,6 +25,7 @@ def verbose(fn):
             kwargs=str(kwargs)
         ))
         return fn(*args, **kwargs)
+
     return _wrapper
 
 
@@ -35,8 +36,6 @@ remove = verbose(os.remove)
 @verbose
 def run(cmd: Union[List[str], str], shell=False):
     assert type(cmd) in (list, str) and cmd
-    if type(cmd) == str:
-        cmd = cmd.split(' ')
 
     try:
         o = check_output(cmd, shell=shell)
@@ -57,6 +56,13 @@ def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
     """
     Removes systemd services left and created by cephadm.
     """
+
+    def podman_stop_all():
+        cmd = "podman ps --format=json " + \
+              '''| jq -r '.[] | "\(.ID) \(.Names)"' ''' + \
+              '''| rg ceph | xargs sudo podman stop'''
+        run(cmd, True)
+
     manager = Manager()
     manager.load()
 
@@ -102,6 +108,8 @@ def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
     data_dir = '/var/lib/ceph'
     if os.access(data_dir, os.W_OK):
         rmtree(data_dir)
+
+    podman_stop_all()
 
 
 def cmake():
