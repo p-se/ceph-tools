@@ -132,6 +132,10 @@ def cmake():
 
 
 if __name__ == '__main__':
+    if os.geteuid() != 0:
+        sys.stderr.write('You need to administrator privileges to run this script!\n')
+        sys.exit(1)
+
     args = docopt(__doc__, version='Ceph Tools 0.1')
     if args['clean-systemd']:
         remove_systemd_ceph_services()
