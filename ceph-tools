@@ -36,6 +36,8 @@ remove = verbose(os.remove)
 @verbose
 def run(cmd: Union[List[str], str], shell=False):
     assert type(cmd) in (list, str) and cmd
+    if type(cmd) == str and shell is False:
+        cmd = cmd.split(' ')
 
     try:
         o = check_output(cmd, shell=shell)
@@ -133,7 +135,7 @@ def cmake():
 
 if __name__ == '__main__':
     if os.geteuid() != 0:
-        sys.stderr.write('You need to administrator privileges to run this script!\n')
+        sys.stderr.write('You need administrator privileges to run this script!\n')
         sys.exit(1)
 
     args = docopt(__doc__, version='Ceph Tools 0.1')
