@@ -61,8 +61,8 @@ def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
 
     def podman_stop_all():
         cmd = "podman ps --format=json " + \
-              '''| jq -r '.[] | "\(.ID) \(.Names)"' ''' + \
-              '''| rg ceph | xargs sudo podman stop'''
+              '''| jq -r '.[] | "\(.Id) \(.Names)"' ''' + \
+              '''| rg ceph | awk -F' ' '{print $1}' | xargs sudo podman stop'''
         run(cmd, True)
 
     manager = Manager()
@@ -74,9 +74,6 @@ def remove_systemd_ceph_services(keyword='ceph') -> NoReturn:
         for name, status in manager.Manager.ListUnitFiles()
         if keyword in str(name)
     ]
-
-    if len(unit_files) == 0:
-        return
 
     for path, status in unit_files:
         name = os.path.split(path)[-1]
