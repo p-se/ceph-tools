@@ -127,16 +127,18 @@ def cmake():
             -ddashboard_frontend_langs=all
             -dwith_radosgw_kafka_endpoint=off
             -dwith_mgr_dashboard_frontend=on
-    ''')
+    '''.replace('\n', ''))
 
 
-if __name__ == '__main__':
+def ensure_admin():
     if os.geteuid() != 0:
         sys.stderr.write('You need administrator privileges to run this script!\n')
         sys.exit(1)
 
+if __name__ == '__main__':
     args = docopt(__doc__, version='Ceph Tools 0.1')
     if args['clean-systemd']:
+        ensure_admin()
         remove_systemd_ceph_services()
     elif args['cmake']:
         cmake()
