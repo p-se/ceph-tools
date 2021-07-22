@@ -26,7 +26,7 @@ sudo systemctl daemon-reload
 sudo systemctl reset-failed
 
 # Remove Ceph directory
-rm -rf /var/lib/ceph
+sudo rm -rf /var/lib/ceph
 
 # Stop all podman containers with Ceph in their name
 sudo podman ps --format=json |
